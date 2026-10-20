@@ -1,0 +1,28 @@
+{
+  "name": "codedrill-root",
+  "private": true,
+  "workspaces": [
+    "codedrill-backend",
+    "codedrill-frontend"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspace=codedrill-backend && npm run lint --workspace=codedrill-frontend",
+    "test": "npm run test --workspace=codedrill-backend && npm run test --workspace=codedrill-frontend",
+    "build": "npm run build --workspace=codedrill-backend && npm run build --workspace=codedrill-frontend",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.1"
+  },
+  "lint-staged": {
+    "codedrill-backend/src/**/*.{ts,js}": [
+      "prettier --write",
+      "npm run lint --workspace=codedrill-backend"
+    ],
+    "codedrill-frontend/src/**/*.{ts,tsx,css}": [
+      "prettier --write"
+    ]
+  }
+}

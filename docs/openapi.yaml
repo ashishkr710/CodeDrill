@@ -1,0 +1,981 @@
+openapi: 3.1.0
+info:
+  title: CodeDrill REST API
+  description: High-performance API for learning and practicing Java Collections and Data Structures & Algorithms.
+  version: 1.0.0
+  contact:
+    name: CodeDrill Engineering Team
+    email: support@codedrill.dev
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local Development Server
+  - url: https://api.codedrill.dev/api/v1
+    description: Production Server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Enter standard 15-minute access token in format 'Bearer <token>'
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+      description: 7-day HttpOnly cookie for session token rotation
+
+  schemas:
+    StandardResponse:
+      type: object
+      required:
+        - success
+        - timestamp
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_FAILED"
+            message:
+              type: string
+              example: "Invalid input payload"
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  issue:
+                    type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - displayName
+        - role
+        - streak
+      properties:
+        id:
+          type: string
+          example: "65e01234567890abcdef0001"
+        email:
+          type: string
+          format: email
+          example: "engineer@codedrill.dev"
+        displayName:
+          type: string
+          example: "JavaArchitect"
+        avatarUrl:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [user, admin]
+        streak:
+          type: object
+          properties:
+            currentStreak:
+              type: integer
+              example: 7
+            longestStreak:
+              type: integer
+              example: 21
+            lastActiveDate:
+              type: string
+              example: "2026-10-20"
+        createdAt:
+          type: string
+          format: date-time
+
+    Track:
+      type: object
+      required:
+        - slug
+        - title
+        - description
+        - totalTopics
+        - totalQuestions
+      properties:
+        slug:
+          type: string
+          enum: [java-collections, dsa]
+        title:
+          type: string
+        description:
+          type: string
+        iconName:
+          type: string
+        displayOrder:
+          type: integer
+        totalTopics:
+          type: integer
+        totalQuestions:
+          type: integer
+
+    Topic:
+      type: object
+      required:
+        - id
+        - trackSlug
+        - slug
+        - title
+        - description
+      properties:
+        id:
+          type: string
+        trackSlug:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        markdownContent:
+          type: string
+        cheatSheet:
+          type: array
+          items:
+            type: object
+            properties:
+              operation:
+                type: string
+              averageTime:
+                type: string
+              worstTime:
+                type: string
+              spaceComplexity:
+                type: string
+              notes:
+                type: string
+        estimatedReadTimeMinutes:
+          type: integer
+
+    QuestionListItem:
+      type: object
+      required:
+        - id
+        - trackSlug
+        - topicId
+        - type
+        - title
+        - difficulty
+        - stats
+      properties:
+        id:
+          type: string
+        trackSlug:
+          type: string
+        topicId:
+          type: string
+        type:
+          type: string
+          enum: [mcq, output_prediction, fill_in_the_blank, coding, interview_short_answer]
+        title:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        companyTags:
+          type: array
+          items:
+            type: string
+        userStatus:
+          type: string
+          enum: [unattempted, attempted, solved]
+        isBookmarked:
+          type: boolean
+        stats:
+          type: object
+          properties:
+            acceptanceRate:
+              type: number
+            totalAttempts:
+              type: integer
+
+    QuestionDetail:
+      type: object
+      required:
+        - id
+        - trackSlug
+        - topicId
+        - type
+        - title
+        - difficulty
+        - prompt
+        - typeSpecificData
+      properties:
+        id:
+          type: string
+        trackSlug:
+          type: string
+        topicId:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        difficulty:
+          type: string
+        prompt:
+          type: string
+        hints:
+          type: array
+          items:
+            type: string
+        companyTags:
+          type: array
+          items:
+            type: string
+        typeSpecificData:
+          type: object
+        userSubmission:
+          type: object
+          nullable: true
+
+    SubmissionResult:
+      type: object
+      required:
+        - submissionId
+        - isCorrect
+        - score
+        - verdict
+      properties:
+        submissionId:
+          type: string
+        isCorrect:
+          type: boolean
+        score:
+          type: number
+        verdict:
+          type: string
+          enum: [ACCEPTED, WRONG_ANSWER, TIME_LIMIT_EXCEEDED, MEMORY_LIMIT_EXCEEDED, COMPILE_ERROR, RUNTIME_ERROR, SELF_EVALUATED]
+        runtimeMs:
+          type: integer
+          nullable: true
+        memoryKb:
+          type: integer
+          nullable: true
+        explanation:
+          type: string
+          nullable: true
+        feedback:
+          type: string
+          nullable: true
+        testCaseSummary:
+          type: object
+          properties:
+            passed:
+              type: integer
+            total:
+              type: integer
+        nextReviewDate:
+          type: string
+          format: date-time
+          nullable: true
+
+  responses:
+    Error400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error401:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error403:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error404:
+      description: Resource Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, displayName]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                displayName:
+                  type: string
+                  minLength: 2
+                  maxLength: 40
+      responses:
+        '201':
+          description: Registration successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+                      user:
+                        $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '409':
+          description: Email already in use
+
+  /auth/login:
+    post:
+      summary: Authenticate user with email and password
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful, returns token pair
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+                      user:
+                        $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+
+  /auth/refresh:
+    post:
+      summary: Rotate refresh token and issue new access token
+      tags: [Auth]
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Access token renewed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+        '401':
+          description: Missing or expired refresh token
+        '403':
+          description: Token reuse detected; session invalidated
+
+  /auth/logout:
+    post:
+      summary: Revoke session and clear refresh cookie
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+
+  /auth/me:
+    get:
+      summary: Get currently authenticated user profile
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /tracks:
+    get:
+      summary: List all active learning tracks
+      tags: [Curriculum]
+      responses:
+        '200':
+          description: Track list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Track'
+
+  /tracks/{slug}:
+    get:
+      summary: Get track details by slug with nested topics
+      tags: [Curriculum]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Track details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Track'
+
+  /topics:
+    get:
+      summary: List topics filtered by track
+      tags: [Curriculum]
+      parameters:
+        - name: trackSlug
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Topics list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Topic'
+
+  /topics/{slug}:
+    get:
+      summary: Get full topic notes and cheat sheets
+      tags: [Curriculum]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Topic full content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Topic'
+
+  /questions:
+    get:
+      summary: Query questions with filters and pagination
+      tags: [Practice]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: trackSlug
+          in: query
+          schema:
+            type: string
+        - name: topicId
+          in: query
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+            enum: [easy, medium, hard]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [mcq, output_prediction, fill_in_the_blank, coding, interview_short_answer]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [unattempted, attempted, solved]
+        - name: companyTag
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated question list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QuestionListItem'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      totalPages:
+                        type: integer
+
+  /questions/{id}:
+    get:
+      summary: Get full question payload for practice
+      tags: [Practice]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Question details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/QuestionDetail'
+
+  /practice/submissions:
+    post:
+      summary: Submit solution for non-coding questions (MCQ, Output, Fill-in, Interview)
+      tags: [Practice]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questionId, responsePayload]
+              properties:
+                questionId:
+                  type: string
+                responsePayload:
+                  type: object
+                  description: Object containing selectedOptionIds, typedOutput, or blankAnswers
+      responses:
+        '200':
+          description: Evaluated submission result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/SubmissionResult'
+
+  /practice/code/run:
+    post:
+      summary: Run code in sandbox against sample test cases
+      tags: [Code Execution]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questionId, language, code]
+              properties:
+                questionId:
+                  type: string
+                language:
+                  type: string
+                  enum: [java, javascript, python]
+                  default: java
+                code:
+                  type: string
+                customInput:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Execution result against sample cases
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      verdict:
+                        type: string
+                      testCases:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            input:
+                              type: string
+                            expectedOutput:
+                              type: string
+                            actualOutput:
+                              type: string
+                            passed:
+                              type: boolean
+                            executionTimeMs:
+                              type: integer
+
+  /practice/code/submit:
+    post:
+      summary: Submit code in sandbox against all hidden test suites
+      tags: [Code Execution]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questionId, language, code]
+              properties:
+                questionId:
+                  type: string
+                language:
+                  type: string
+                  enum: [java, javascript, python]
+                  default: java
+                code:
+                  type: string
+      responses:
+        '200':
+          description: Evaluated final code submission
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/SubmissionResult'
+
+  /progress/summary:
+    get:
+      summary: Aggregate user statistics, streaks, and track mastery
+      tags: [Progress]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User mastery breakdown
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      totalSolved:
+                        type: integer
+                      totalAttempted:
+                        type: integer
+                      accuracyOverall:
+                        type: number
+                      trackBreakdown:
+                        type: object
+                      topicMasteryList:
+                        type: array
+                        items:
+                          type: object
+
+  /progress/weak-topics:
+    get:
+      summary: Get list of weak topics flagged for urgent remediation
+      tags: [Progress]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Weak topics list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /revision/queue:
+    get:
+      summary: Retrieve spaced repetition items due for review
+      tags: [Revision]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Due revision cards
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /revision/{id}/review:
+    post:
+      summary: Submit SM-2 review rating (0 to 5) for a revision item
+      tags: [Revision]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [qualityScore]
+              properties:
+                qualityScore:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+      responses:
+        '200':
+          description: Next review interval updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      nextDueDate:
+                        type: string
+                      intervalDays:
+                        type: integer
+                      easeFactor:
+                        type: number
+
+  /bookmarks:
+    get:
+      summary: Get all bookmarked questions with notes
+      tags: [Bookmarks]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of user bookmarks
+    post:
+      summary: Bookmark a question with optional note
+      tags: [Bookmarks]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questionId]
+              properties:
+                questionId:
+                  type: string
+                noteMarkdown:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Bookmark created
+
+  /bookmarks/{questionId}:
+    delete:
+      summary: Remove bookmark
+      tags: [Bookmarks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bookmark removed
+
+  /challenges/daily:
+    get:
+      summary: Fetch today's featured daily challenge
+      tags: [Practice]
+      responses:
+        '200':
+          description: Daily challenge problem details
+
+  /admin/questions/import:
+    post:
+      summary: Bulk import questions via JSON payload or CSV stream
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questions]
+              properties:
+                dryRun:
+                  type: boolean
+                  default: false
+                questions:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Import summary with validation logs
