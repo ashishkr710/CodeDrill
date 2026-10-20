@@ -51,11 +51,11 @@ M9: Daily & Mock ──────► M10: Security, Polish & Deploy
 ## Milestone 2: Authentication, Authorization & User Profile
 *Objective:* Implement dual-token JWT authentication (access in memory, refresh in HttpOnly cookie), Argon2 hashing, rate limiting, and profile management.
 
-- [ ] **Task 2.1: User & RefreshToken Models**
+- [x] **Task 2.1: User & RefreshToken Models**
   - **Dependencies:** Task 1.1
   - **Estimate:** 2h
   - **Acceptance Criteria:** Mongoose models with Argon2 password hashing hooks and TTL index on refresh token expiration.
-- [ ] **Task 2.2: Auth Service & Token Rotation Logic**
+- [x] **Task 2.2: Auth Service & Token Rotation Logic**
   - **Dependencies:** Task 2.1
   - **Estimate:** 3h
   - **Acceptance Criteria:** 15m Access Token, 7d Refresh Token, token rotation on refresh, and replay detection revoking token family.
