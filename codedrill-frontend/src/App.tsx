@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Routes, Route } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,12 +18,24 @@ import {
   Sparkles,
   CheckCircle2,
   ShieldAlert,
+  LogOut,
+  User,
 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { LoginPage } from "@/pages/LoginPage";
+import { RegisterPage } from "@/pages/RegisterPage";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AuthInitializer } from "@/components/auth/AuthInitializer";
+import { useAuthStore } from "@/store/auth.store";
+import { authApiService } from "@/services/auth.service";
 
-export function App() {
+/* ---------- Landing / Dashboard home ---------- */
+function HomePage() {
   const [apiStatus, setApiStatus] = useState<"checking" | "online" | "offline">(
     "checking",
   );
+  const navigate = useNavigate();
+  const { user, logout, accessToken } = useAuthStore();
 
   useEffect(() => {
     fetch("/api/v1/health/liveness")
@@ -31,13 +44,19 @@ export function App() {
       .catch(() => setApiStatus("offline"));
   }, []);
 
+  const handleLogout = async () => {
+    await authApiService.logout();
+    logout();
+    navigate("/login");
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Top Navigation */}
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
               <Code2 className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -48,14 +67,18 @@ export function App() {
                 v1.0
               </span>
             </div>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold">
-              <Flame className="h-4 w-4 text-amber-400 fill-amber-400 animate-pulse" />
-              <span>5 Day Streak</span>
-            </div>
+            {/* Streak badge */}
+            {user && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold">
+                <Flame className="h-4 w-4 text-amber-400 fill-amber-400 animate-pulse" />
+                <span>{user.streak.currentStreak} Day Streak</span>
+              </div>
+            )}
 
+            {/* API status */}
             <div className="flex items-center gap-2 text-xs">
               {apiStatus === "online" && (
                 <span className="inline-flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
@@ -74,13 +97,46 @@ export function App() {
               )}
             </div>
 
-            <Button
-              size="sm"
-              variant="default"
-              className="shadow-md shadow-indigo-600/20"
-            >
-              Sign In
-            </Button>
+            {/* Auth CTA */}
+            {accessToken && user ? (
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/60 border border-slate-700/50 text-slate-300 text-xs">
+                  <User className="h-3.5 w-3.5 text-indigo-400" />
+                  <span>{user.displayName}</span>
+                </div>
+                <Button
+                  id="logout-btn"
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleLogout}
+                  className="text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                >
+                  <LogOut className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button
+                  id="nav-login-btn"
+                  size="sm"
+                  variant="ghost"
+                  asChild
+                  className="text-slate-300 hover:text-white"
+                >
+                  <Link to="/login">Sign In</Link>
+                </Button>
+                <Button
+                  id="nav-register-btn"
+                  size="sm"
+                  variant="default"
+                  asChild
+                  className="shadow-md shadow-indigo-600/20"
+                >
+                  <Link to="/register">Get Started</Link>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -109,6 +165,25 @@ export function App() {
             resizing, fail-fast mechanics, concurrency contracts, and
             algorithmic patterns with automated SM-2 spaced repetition.
           </p>
+          {!accessToken && (
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Button
+                asChild
+                size="lg"
+                className="shadow-lg shadow-indigo-600/30 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500"
+              >
+                <Link to="/register">Start for Free</Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-slate-700 text-slate-300 hover:bg-slate-800/60"
+              >
+                <Link to="/login">Sign In</Link>
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* 5 Modalities Strip */}
@@ -240,6 +315,32 @@ export function App() {
         </p>
       </footer>
     </div>
+  );
+}
+
+/* ---------- Root App with routing ---------- */
+export function App() {
+  return (
+    <AuthInitializer>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        {/* Example of a future protected route */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Catch-all → home */}
+        <Route path="*" element={<HomePage />} />
+      </Routes>
+    </AuthInitializer>
   );
 }
 

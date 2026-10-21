@@ -1,7 +1,7 @@
 # CodeDrill — Master Development & Implementation Plan
 
 **Version:** 1.0.0  
-**Status:** Approved for Review (Phase 0)  
+**Status:** Milestone 2 Complete — Starting Milestone 3  
 **Author:** Full-Stack TypeScript Architect  
 
 ---
@@ -59,15 +59,15 @@ M9: Daily & Mock ──────► M10: Security, Polish & Deploy
   - **Dependencies:** Task 2.1
   - **Estimate:** 3h
   - **Acceptance Criteria:** 15m Access Token, 7d Refresh Token, token rotation on refresh, and replay detection revoking token family.
-- [ ] **Task 2.3: Auth Routes, Controllers & Zod Schemas**
+- [x] **Task 2.3: Auth Routes, Controllers & Zod Schemas**
   - **Dependencies:** Task 2.2
   - **Estimate:** 2.5h
   - **Acceptance Criteria:** Endpoints `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me` with full Zod validation and integration tests.
-- [ ] **Task 2.4: Frontend Auth State & Interceptors**
+- [x] **Task 2.4: Frontend Auth State & Interceptors**
   - **Dependencies:** Task 2.3, Task 1.5
   - **Estimate:** 3h
   - **Acceptance Criteria:** Zustand `authStore`, silent token refresh handler on 401, protected route guard component.
-- [ ] **Task 2.5: Auth UI Pages**
+- [x] **Task 2.5: Auth UI Pages**
   - **Dependencies:** Task 2.4
   - **Estimate:** 3h
   - **Acceptance Criteria:** Accessible Login and Registration pages with React Hook Form, Zod client validation, and toast feedback.
